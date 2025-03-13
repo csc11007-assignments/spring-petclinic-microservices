@@ -1,5 +1,5 @@
 pipeline {
-    agent none  // Không dùng "any", sẽ chỉ định agent ở từng stage
+    agent none 
     
     stages {
         stage('Detect Changes') {
@@ -25,7 +25,10 @@ pipeline {
                         return
                     }
 
-                    echo "Affected services: ${affectedServices}"
+                    // Xáo trộn danh sách service để phân phối ngẫu nhiên
+                    affectedServices.shuffle()
+
+                    echo "Affected services (shuffled): ${affectedServices}"
                     env.AFFECTED_SERVICES = affectedServices.join(',') // Lưu danh sách cho các stage sau
                 }
             }
@@ -35,53 +38,35 @@ pipeline {
             when {
                 expression { return env.AFFECTED_SERVICES != null && env.AFFECTED_SERVICES != "" }
             }
-            parallel {
-                stage('Test on agent-1') {
-                    agent { label 'agent-1' }
-                    steps {
-                        script {
-                            def affectedServices = env.AFFECTED_SERVICES.split(',')
-                            for (int i = 0; i < affectedServices.size(); i++) {
-                                if (i % 2 == 0) { // Chia task: agent-1 xử lý service chẵn
-                                    def service = affectedServices[i]
-                                    echo "Testing service: ${service} on agent-1"
+            steps {
+                script {
+                    def affectedServices = env.AFFECTED_SERVICES.split(',')
+                    def parallelStages = [:] // Map để chứa các stage động
+
+                    // Tạo stage động cho từng service
+                    affectedServices.eachWithIndex { service, index ->
+                        parallelStages["Test ${service} (${index})"] = {
+                            stage("Test ${service}") {
+                                // Chọn agent dựa trên nhãn chung (Jenkins sẽ tự phân phối)
+                                agent { label 'agent-1 || agent-2' }
+                                steps {
+                                    echo "Testing service: ${service} on ${env.NODE_NAME}"
                                     dir(service) {
                                         sh 'mvn clean test'
                                         sh 'mvn jacoco:report'
                                     }
                                 }
-                            }
-                        }
-                    }
-                    post {
-                        always {
-                            junit '**/target/surefire-reports/*.xml' // Thu thập kết quả test trên agent-1
-                        }
-                    }
-                }
-                
-                stage('Test on agent-2') {
-                    agent { label 'agent-2' }
-                    steps {
-                        script {
-                            def affectedServices = env.AFFECTED_SERVICES.split(',')
-                            for (int i = 0; i < affectedServices.size(); i++) {
-                                if (i % 2 != 0) { // Agent-2 xử lý service lẻ
-                                    def service = affectedServices[i]
-                                    echo "Testing service: ${service} on agent-2"
-                                    dir(service) {
-                                        sh 'mvn clean test'
-                                        sh 'mvn jacoco:report'
+                                post {
+                                    always {
+                                        junit '**/target/surefire-reports/*.xml'
                                     }
                                 }
                             }
                         }
                     }
-                    post {
-                        always {
-                            junit '**/target/surefire-reports/*.xml' // Thu thập kết quả test trên agent-2
-                        }
-                    }
+
+                    // Chạy các stage song song
+                    parallel parallelStages
                 }
             }
         }
@@ -90,34 +75,19 @@ pipeline {
             when {
                 expression { return env.AFFECTED_SERVICES != null && env.AFFECTED_SERVICES != "" }
             }
-            parallel {
-                stage('Build on agent-1') {
-                    agent { label 'agent-1' }
-                    steps {
-                        script {
-                            def affectedServices = env.AFFECTED_SERVICES.split(',')
-                            for (int i = 0; i < affectedServices.size(); i++) {
-                                if (i % 2 == 0) {
-                                    def service = affectedServices[i]
-                                    echo "Building service: ${service} on agent-1"
-                                    dir(service) {
-                                        sh 'mvn clean package -DskipTests'
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+            steps {
+                script {
+                    def affectedServices = env.AFFECTED_SERVICES.split(',')
+                    def parallelStages = [:] // Map để chứa các stage động
 
-                stage('Build on agent-2') {
-                    agent { label 'agent-2' }
-                    steps {
-                        script {
-                            def affectedServices = env.AFFECTED_SERVICES.split(',')
-                            for (int i = 0; i < affectedServices.size(); i++) {
-                                if (i % 2 != 0) {
-                                    def service = affectedServices[i]
-                                    echo "Building service: ${service} on agent-2"
+                    // Tạo stage động cho từng service
+                    affectedServices.eachWithIndex { service, index ->
+                        parallelStages["Build ${service} (${index})"] = {
+                            stage("Build ${service}") {
+                                // Chọn agent dựa trên nhãn chung (Jenkins sẽ tự phân phối)
+                                agent { label 'agent-1 || agent-2' }
+                                steps {
+                                    echo "Building service: ${service} on ${env.NODE_NAME}"
                                     dir(service) {
                                         sh 'mvn clean package -DskipTests'
                                     }
@@ -125,6 +95,9 @@ pipeline {
                             }
                         }
                     }
+
+                    // Chạy các stage song song
+                    parallel parallelStages
                 }
             }
         }
