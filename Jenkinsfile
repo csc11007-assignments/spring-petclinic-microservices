@@ -1,5 +1,5 @@
 pipeline {
-    agent none 
+    agent none  // Không dùng "any", sẽ chỉ định agent ở từng stage
     
     stages {
         stage('Detect Changes') {
@@ -25,8 +25,8 @@ pipeline {
                         return
                     }
 
-                    // Xáo trộn danh sách service để phân phối ngẫu nhiên
-                    affectedServices.shuffle()
+                    // Sử dụng Collections.shuffle() để xáo trộn danh sách
+                    java.util.Collections.shuffle(affectedServices)
 
                     echo "Affected services (shuffled): ${affectedServices}"
                     env.AFFECTED_SERVICES = affectedServices.join(',') // Lưu danh sách cho các stage sau
