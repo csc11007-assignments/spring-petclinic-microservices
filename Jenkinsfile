@@ -53,6 +53,11 @@ pipeline {
                             }
                         }
                     }
+                    post {
+                        always {
+                            junit '**/target/surefire-reports/*.xml' // Thu thập kết quả test trên agent-1
+                        }
+                    }
                 }
                 
                 stage('Test on agent-2') {
@@ -72,11 +77,11 @@ pipeline {
                             }
                         }
                     }
-                }
-            }
-            post {
-                always {
-                    junit '**/target/surefire-reports/*.xml'
+                    post {
+                        always {
+                            junit '**/target/surefire-reports/*.xml' // Thu thập kết quả test trên agent-2
+                        }
+                    }
                 }
             }
         }

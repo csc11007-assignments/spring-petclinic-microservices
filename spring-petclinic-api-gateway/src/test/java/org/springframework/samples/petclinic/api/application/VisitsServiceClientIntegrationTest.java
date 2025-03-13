@@ -62,4 +62,3 @@ class VisitsServiceClientIntegrationTest {
     }
 
 }
-// test api-gateway ci
