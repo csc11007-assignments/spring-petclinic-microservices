@@ -1,10 +1,6 @@
 pipeline {
     agent none  // Không dùng "any", sẽ chỉ định agent ở từng stage
-
-    environment {
-        GITHUB_TOKEN = credentials('github-token')
-    }
-
+    
     stages {
         stage('Detect Changes') {
             agent { label 'agent-1' }  // Chạy trên agent-1
