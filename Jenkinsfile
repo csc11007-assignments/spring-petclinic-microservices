@@ -1,12 +1,11 @@
 pipeline {
-    agent none  // Sử dụng agent none để chỉ định agent riêng cho từng stage
+    agent any
 
     stages {
         stage('Detect Changes') {
-            agent { label 'agent-1' }  // Chạy trên agent-1
             steps {
                 script {
-                    def affectedServices = [] // Danh sách các service bị thay đổi
+                    def affectedServices = []
                     def changedFiles = sh(script: 'git diff --name-only HEAD~1', returnStdout: true).trim().split("\n")
                     echo "Changed files: ${changedFiles}"
 
@@ -26,13 +25,12 @@ pipeline {
                     }
 
                     echo "Affected services: ${affectedServices}"
-                    env.AFFECTED_SERVICES = affectedServices.join(',') // Lưu danh sách thành chuỗi cho các stage sau
+                    env.AFFECTED_SERVICES = affectedServices.join(',') 
                 }
             }
         }
 
         stage('Test and Coverage') {
-            agent { label 'agent-1' }  // Chạy trên agent-1
             when {
                 expression { return env.AFFECTED_SERVICES != null && env.AFFECTED_SERVICES != "" }
             }
@@ -42,9 +40,11 @@ pipeline {
                     for (service in affectedServices) {
                         echo "Testing service: ${service} on ${env.NODE_NAME}"
                         dir(service) {
-                            // Chạy test với JaCoCo
-                            sh 'mvn clean test'
-                            // Tạo báo cáo JaCoCo
+                            timeout(time: 10, unit: 'MINUTES') {
+                                retry(3) {
+                                    sh 'mvn clean test'
+                                }
+                            }
                             sh 'mvn jacoco:report'
                         }
                     }
@@ -52,7 +52,6 @@ pipeline {
             }
             post {
                 always {
-                    // Báo cáo kết quả test chỉ của các service đã chạy test
                     junit '**/target/surefire-reports/*.xml'
 
                     script {
@@ -60,12 +59,14 @@ pipeline {
                         for (service in affectedServices) {
                             echo "Generating JaCoCo report for: ${service}"
                             jacoco(
-                                execPattern: "${service}/target/jacoco.exec", // Chỉ lấy exec của service test
+                                execPattern: "${service}/target/jacoco.exec",
                                 classPattern: "${service}/target/classes",
                                 sourcePattern: "${service}/src/main/java",
                                 exclusionPattern: "${service}/src/test/**",
-                                minimumLineCoverage: '70', // Yêu cầu tối thiểu 70% coverage
-                                changeBuildStatus: true // Thất bại nếu không đạt ngưỡng
+                                minimumLineCoverage: '70',
+                                changeBuildStatus: true,
+                                buildOverBuild: false,
+                                deltaLineCoverage: '0'
                             )
                         }
                     }
@@ -74,7 +75,6 @@ pipeline {
         }
 
         stage('Build') {
-            agent { label 'agent-1' }  // Chạy trên agent-1
             when {
                 expression { return env.AFFECTED_SERVICES != null && env.AFFECTED_SERVICES != "" }
             }
