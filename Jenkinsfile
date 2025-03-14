@@ -3,7 +3,7 @@ pipeline {
 
     stages {
         stage('Detect Changes') {
-            agent { label 'agent-2' }  // Chạy trên agent-1
+            agent { label 'agent-1' }  // Chạy trên agent-1
             steps {
                 script {
                     def affectedServices = [] // Danh sách các service bị thay đổi
@@ -32,7 +32,7 @@ pipeline {
         }
 
         stage('Test and Coverage') {
-            agent { label 'agent-2' }  // Chạy trên agent-1
+            agent { label 'agent-1' }  // Chạy trên agent-1
             when {
                 expression { return env.AFFECTED_SERVICES != null && env.AFFECTED_SERVICES != "" }
             }
@@ -74,7 +74,7 @@ pipeline {
         }
 
         stage('Build') {
-            agent { label 'agent-2' }  // Chạy trên agent-1
+            agent { label 'agent-1' }  // Chạy trên agent-1
             when {
                 expression { return env.AFFECTED_SERVICES != null && env.AFFECTED_SERVICES != "" }
             }
