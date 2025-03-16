@@ -48,6 +48,14 @@ pipeline {
                             sh 'mvn jacoco:report'
                         }
                     }
+                    script {
+                        def jacocoFiles = affectedServices.collect { "${it}/target/jacoco.exec" }.join(' ')
+                        if (jacocoFiles) {
+                            echo "Merging JaCoCo reports for affected services: ${jacocoFiles}"
+                            sh "mvn jacoco:merge -Djacoco.destFile=combined-jacoco.exec -Djacoco.fileSet=${jacocoFiles}"
+                            sh "mvn jacoco:report -Djacoco.dataFile=combined-jacoco.exec"
+                        }
+                    }
                 }
             }
             post {
@@ -56,13 +64,13 @@ pipeline {
 
                     script {
                         def affectedServices = env.AFFECTED_SERVICES.split(',')
-                        for (service in affectedServices) {
-                            echo "Generating JaCoCo report for: ${service}"
+                        if (!affectedServices.isEmpty()) {
+                            echo "Generating combined JaCoCo report for affected services"
                             jacoco(
-                                execPattern: "${service}/target/jacoco.exec",
-                                classPattern: "${service}/target/classes",
-                                sourcePattern: "${service}/src/main/java",
-                                exclusionPattern: "${service}/src/test/**"
+                                execPattern: 'combined-jacoco.exec',
+                                classPattern: affectedServices.collect { "${it}/target/classes" }.join(','),
+                                sourcePattern: affectedServices.collect { "${it}/src/main/java" }.join(','),
+                                exclusionPattern: affectedServices.collect { "${it}/src/test/**" }.join(',')
                             )
                         }
                     }
