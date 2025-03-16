@@ -10,20 +10,21 @@ pipeline {
                     echo "Changed files: ${changedFiles}"
 
                     for (file in changedFiles) {
-                        if (file.startsWith("spring-petclinic-visits-service")) {
-                            if (!affectedServices.contains("spring-petclinic-visits-service")) {
-                                affectedServices << "spring-petclinic-visits-service"
-                            }
-                        }
-                    }
+                         if (file.startsWith("spring-petclinic-customers-service")) {
+                             if (!affectedServices.contains("spring-petclinic-customers-service")) {
+                                 affectedServices << "spring-petclinic-customers-service"
+                             }
+                         }
+                     }
+ 
 
                     if (affectedServices.isEmpty()) {
-                        echo "No changes detected in spring-petclinic-visits-service. Skipping pipeline."
+                        echo "No relevant service changes detected. Skipping pipeline."
                         currentBuild.result = 'SUCCESS'
                         return
                     }
 
-                    echo "Affected service: ${affectedServices}"
+                    echo "Affected services: ${affectedServices}"
                     env.AFFECTED_SERVICES = affectedServices.join(',')
                 }
             }
