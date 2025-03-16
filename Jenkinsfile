@@ -18,7 +18,7 @@ pipeline {
                         }
                     }
 
-                    if (affectedServices.isEmpty()) {
+                    if (affectedServices.size() == 0) {
                         echo "No relevant service changes detected. Skipping pipeline."
                         currentBuild.result = 'SUCCESS'
                         return
@@ -50,9 +50,9 @@ pipeline {
                     }
                     
                     script {
-                        def jacocoFiles = findFiles(glob: '**/target/jacoco.exec')
-                        if (jacocoFiles.length > 0) {
-                            def jacocoFileList = jacocoFiles.collect { it.path }.join(',')
+                        def jacocoFiles = sh(script: "find . -type f -path '**/target/jacoco.exec'", returnStdout: true).trim()
+                        if (jacocoFiles) {
+                            def jacocoFileList = jacocoFiles.split('\n').join(',')
                             echo "Merging JaCoCo reports for: ${jacocoFileList}"
                             sh "mvn jacoco:merge -Djacoco.destFile=${env.WORKSPACE}/combined-jacoco.exec -Djacoco.fileSet=\"${jacocoFileList}\""
                             sh "mvn jacoco:report -Djacoco.dataFile=${env.WORKSPACE}/combined-jacoco.exec"
@@ -68,7 +68,7 @@ pipeline {
 
                     script {
                         def affectedServices = env.AFFECTED_SERVICES.split(',')
-                        if (!affectedServices.isEmpty() && fileExists("${env.WORKSPACE}/combined-jacoco.exec")) {
+                        if (affectedServices.length > 0 && fileExists("${env.WORKSPACE}/combined-jacoco.exec")) { 
                             echo "Generating combined JaCoCo report for affected services"
                             jacoco(
                                 execPattern: "${env.WORKSPACE}/combined-jacoco.exec",
