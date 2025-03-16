@@ -37,6 +37,8 @@ pipeline {
             steps {
                 script {
                     def affectedServices = env.AFFECTED_SERVICES.split(',')
+                    def jacocoFiles = []
+
                     for (service in affectedServices) {
                         echo "Testing service: ${service} on ${env.NODE_NAME}"
                         dir(service) {
@@ -46,16 +48,12 @@ pipeline {
                                 }
                             }
                             sh 'mvn jacoco:report'
+                            jacocoFiles << "${service}/target/jacoco.exec"
                         }
                     }
-                    script {
-                        def jacocoFiles = affectedServices.collect { "${it}/target/jacoco.exec" }.join(' ')
-                        if (jacocoFiles) {
-                            echo "Merging JaCoCo reports for affected services: ${jacocoFiles}"
-                            sh "mvn jacoco:merge -Djacoco.destFile=combined-jacoco.exec -Djacoco.fileSet=${jacocoFiles}"
-                            sh "mvn jacoco:report -Djacoco.dataFile=combined-jacoco.exec"
-                        }
-                    }
+                    def mergedExec = "merged-jacoco.exec"
+                    sh "mvn jacoco:merge -Djacoco.destfile=${mergedExec} -Djacoco.datafiles=${jacocoFiles.join(',')}"
+                    sh "mvn jacoco:report -Djacoco.datafile=${mergedExec}"
                 }
             }
             post {
@@ -63,16 +61,13 @@ pipeline {
                     junit '**/target/surefire-reports/*.xml'
 
                     script {
-                        def affectedServices = env.AFFECTED_SERVICES.split(',')
-                        if (!affectedServices.isEmpty()) {
-                            echo "Generating combined JaCoCo report for affected services"
-                            jacoco(
-                                execPattern: 'combined-jacoco.exec',
-                                classPattern: affectedServices.collect { "${it}/target/classes" }.join(','),
-                                sourcePattern: affectedServices.collect { "${it}/src/main/java" }.join(','),
-                                exclusionPattern: affectedServices.collect { "${it}/src/test/**" }.join(',')
-                            )
-                        }
+                        echo "Generating merged JaCoCo report"
+                        jacoco(
+                            execPattern: "merged-jacoco.exec",
+                            classPattern: "**/target/classes",
+                            sourcePattern: "**/src/main/java",
+                            exclusionPattern: "**/src/test/**"
+                        )
                     }
                 }
             }
