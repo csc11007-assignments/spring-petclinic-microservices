@@ -48,12 +48,16 @@ pipeline {
                             sh 'mvn jacoco:report'
                         }
                     }
+                    
                     script {
-                        def jacocoFiles = affectedServices.collect { "${it}/target/jacoco.exec" }.join(',')
-                        if (jacocoFiles) {
-                            echo "Merging JaCoCo reports for affected services: ${jacocoFiles}"
-                            sh "mvn jacoco:merge -Djacoco.destFile=combined-jacoco.exec -Djacoco.fileSet=\"${jacocoFiles}\""
-                            sh "mvn jacoco:report -Djacoco.dataFile=combined-jacoco.exec"
+                        def jacocoFiles = findFiles(glob: '**/target/jacoco.exec')
+                        if (jacocoFiles.length > 0) {
+                            def jacocoFileList = jacocoFiles.collect { it.path }.join(',')
+                            echo "Merging JaCoCo reports for: ${jacocoFileList}"
+                            sh "mvn jacoco:merge -Djacoco.destFile=${env.WORKSPACE}/combined-jacoco.exec -Djacoco.fileSet=\"${jacocoFileList}\""
+                            sh "mvn jacoco:report -Djacoco.dataFile=${env.WORKSPACE}/combined-jacoco.exec"
+                        } else {
+                            echo "No JaCoCo execution files found to merge"
                         }
                     }
                 }
@@ -64,14 +68,16 @@ pipeline {
 
                     script {
                         def affectedServices = env.AFFECTED_SERVICES.split(',')
-                        if (!affectedServices.isEmpty()) {
+                        if (!affectedServices.isEmpty() && fileExists("${env.WORKSPACE}/combined-jacoco.exec")) {
                             echo "Generating combined JaCoCo report for affected services"
                             jacoco(
-                                execPattern: 'combined-jacoco.exec',
+                                execPattern: "${env.WORKSPACE}/combined-jacoco.exec",
                                 classPattern: affectedServices.collect { "${it}/target/classes" }.join(','),
                                 sourcePattern: affectedServices.collect { "${it}/src/main/java" }.join(','),
                                 exclusionPattern: affectedServices.collect { "${it}/src/test/**" }.join(',')
                             )
+                        } else {
+                            echo "Skipping JaCoCo report generation - no coverage data available"
                         }
                     }
                 }
