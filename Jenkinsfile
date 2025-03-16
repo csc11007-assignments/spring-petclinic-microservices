@@ -10,15 +10,15 @@ pipeline {
                     echo "Changed files: ${changedFiles}"
 
                     for (file in changedFiles) {
-                        if (file.startsWith("spring-petclinic-visits-service")) {
-                            if (!affectedServices.contains("spring-petclinic-visits-service")) {
-                                affectedServices << "spring-petclinic-visits-service"
+                        if (file.startsWith("spring-petclinic-vets-service")) {
+                            if (!affectedServices.contains("spring-petclinic-vets-service")) {
+                                affectedServices << "spring-petclinic-vets-service"
                             }
                         }
                     }
 
                     if (affectedServices.isEmpty()) {
-                        echo "No changes detected in spring-petclinic-visits-service. Skipping pipeline."
+                        echo "No changes detected in spring-petclinic-vets-service. Skipping pipeline."
                         currentBuild.result = 'SUCCESS'
                         return
                     }
