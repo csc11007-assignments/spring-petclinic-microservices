@@ -52,7 +52,7 @@ pipeline {
                         def jacocoFiles = affectedServices.collect { "${it}/target/jacoco.exec" }.join(',')
                         if (jacocoFiles) {
                             echo "Merging JaCoCo reports for affected services: ${jacocoFiles}"
-                            sh "mvn jacoco:merge -Djacoco.destFile=combined-jacoco.exec -Djacoco.fileSet=${jacocoFiles}"
+                            sh "mvn jacoco:merge -Djacoco.destFile=combined-jacoco.exec -Djacoco.fileSet=\"${jacocoFiles}\""
                             sh "mvn jacoco:report -Djacoco.dataFile=combined-jacoco.exec"
                         }
                     }
