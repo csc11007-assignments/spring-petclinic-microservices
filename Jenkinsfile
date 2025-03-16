@@ -18,7 +18,7 @@ pipeline {
                         }
                     }
 
-                    if (affectedServices.size() == 0) {
+                    if (affectedServices.isEmpty()) {
                         echo "No relevant service changes detected. Skipping pipeline."
                         currentBuild.result = 'SUCCESS'
                         return
@@ -37,6 +37,7 @@ pipeline {
             steps {
                 script {
                     def affectedServices = env.AFFECTED_SERVICES.split(',')
+                    
                     for (service in affectedServices) {
                         echo "Testing service: ${service} on ${env.NODE_NAME}"
                         dir(service) {
@@ -49,16 +50,9 @@ pipeline {
                         }
                     }
                     
-                    script {
-                        def jacocoFiles = sh(script: "find . -type f -path '**/target/jacoco.exec'", returnStdout: true).trim()
-                        if (jacocoFiles) {
-                            def jacocoFileList = jacocoFiles.split('\n').join(',')
-                            echo "Merging JaCoCo reports for: ${jacocoFileList}"
-                            sh "mvn jacoco:merge -Djacoco.destFile=${env.WORKSPACE}/combined-jacoco.exec -Djacoco.fileSet=\"${jacocoFileList}\""
-                            sh "mvn jacoco:report -Djacoco.dataFile=${env.WORKSPACE}/combined-jacoco.exec"
-                        } else {
-                            echo "No JaCoCo execution files found to merge"
-                        }
+                    if (affectedServices.size() > 1) {
+                        sh 'mvn jacoco:merge -Djacoco.destFile=target/combined-jacoco.exec -DskipTests'
+                        sh 'mvn jacoco:report -Djacoco.dataFile=target/combined-jacoco.exec -DskipTests'
                     }
                 }
             }
@@ -68,16 +62,33 @@ pipeline {
 
                     script {
                         def affectedServices = env.AFFECTED_SERVICES.split(',')
-                        if (affectedServices.length > 0 && fileExists("${env.WORKSPACE}/combined-jacoco.exec")) { 
-                            echo "Generating combined JaCoCo report for affected services"
-                            jacoco(
-                                execPattern: "${env.WORKSPACE}/combined-jacoco.exec",
-                                classPattern: affectedServices.collect { "${it}/target/classes" }.join(','),
-                                sourcePattern: affectedServices.collect { "${it}/src/main/java" }.join(','),
-                                exclusionPattern: affectedServices.collect { "${it}/src/test/**" }.join(',')
-                            )
-                        } else {
-                            echo "Skipping JaCoCo report generation - no coverage data available"
+                        
+                        def reportInfo
+                        
+                        if (affectedServices.size() > 1) {
+                            echo "Generating combined JaCoCo report for all affected services"
+                            reportInfo = [
+                                execPattern: 'target/combined-jacoco.exec',
+                                classPattern: '**/target/classes',
+                                sourcePattern: '**/src/main/java',
+                                exclusionPattern: '**/src/test/**',
+                                changeBuildStatus: true,
+                                name: 'Combined Coverage Report'
+                            ]
+                        } else if (affectedServices.size() == 1) {
+                            def service = affectedServices[0]
+                            echo "Generating JaCoCo report for: ${service}"
+                            reportInfo = [
+                                execPattern: "${service}/target/jacoco.exec",
+                                classPattern: "${service}/target/classes",
+                                sourcePattern: "${service}/src/main/java",
+                                exclusionPattern: "${service}/src/test/**",
+                                changeBuildStatus: true,
+                                name: service
+                            ]
+                        }
+                        if (reportInfo) {
+                            jacoco(reportInfo)
                         }
                     }
                 }
@@ -99,6 +110,19 @@ pipeline {
                     }
                 }
             }
+        }
+    }
+    
+    post {
+        success {
+            echo "Pipeline completed successfully!"
+        }
+        failure {
+            echo "Pipeline failed!"
+        }
+        always {
+            echo "Pipeline completed, cleaning workspace..."
+            cleanWs()
         }
     }
 }
