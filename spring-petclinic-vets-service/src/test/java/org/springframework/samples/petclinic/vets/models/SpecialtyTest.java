@@ -20,4 +20,3 @@ class SpecialtyTest {
         assertNull(specialty.getName());
     }
 }
-// change
