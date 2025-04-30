@@ -43,3 +43,4 @@ class MetricConfigTest {
         assertNotNull(timedAspect);
     }
 }
+// test
