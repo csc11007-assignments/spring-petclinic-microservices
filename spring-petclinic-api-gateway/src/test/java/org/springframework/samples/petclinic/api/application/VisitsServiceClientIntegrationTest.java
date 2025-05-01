@@ -62,4 +62,3 @@ class VisitsServiceClientIntegrationTest {
     }
 
 }
-// change
