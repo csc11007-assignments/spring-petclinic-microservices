@@ -32,7 +32,7 @@ class VisitTest {
         Date date = new Date();
         visit.setDate(date);
 
-        assertEquals(2, visit.getId());
+        assertEquals(20, visit.getId());
         assertEquals(456, visit.getPetId());
         assertEquals("Another visit", visit.getDescription());
         assertEquals(date, visit.getDate());
