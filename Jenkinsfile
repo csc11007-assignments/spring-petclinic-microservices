@@ -1,5 +1,5 @@
 pipeline {
-   agent { label 'agent-1 || agent-2' }
+    agent { label 'agent-1 || agent-2' }
 
     stages {
         stage('Detect Changes') {
@@ -97,6 +97,12 @@ pipeline {
                     }
                 }
             }
+        }
+    }
+
+    post {
+        always {
+            cleanWs()
         }
     }
 }
