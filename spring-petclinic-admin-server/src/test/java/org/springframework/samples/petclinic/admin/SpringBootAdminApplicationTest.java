@@ -10,4 +10,3 @@ class SpringBootAdminApplicationTest {
     void contextLoads() {
     }
 }
-//change

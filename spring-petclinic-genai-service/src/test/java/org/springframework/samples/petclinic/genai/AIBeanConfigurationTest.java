@@ -47,4 +47,3 @@ class AIBeanConfigurationTest {
         assertNotNull(builder);
     }
 }
-// change
