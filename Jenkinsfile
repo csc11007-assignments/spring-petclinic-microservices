@@ -41,7 +41,7 @@ pipeline {
                         dir(service) {
                             timeout(time: 10, unit: 'MINUTES') {
                                 retry(3) {
-                                    sh 'mvn clean verify'
+                                    sh 'mvn clean verify -B'
                                 }
                             }
                         }
@@ -80,12 +80,17 @@ pipeline {
                     for (service in affectedServices) {
                         echo "Building service: ${service} on ${env.NODE_NAME}"
                         dir(service) {
-                            sh 'mvn clean package -DskipTests'
+                            sh 'mvn clean package -DskipTests -am -q -B'
                         }
                     }
                 }
             }
         }
     }
+
+    post {
+        always {
+            cleanWs()
+        }
+    }
 }
-// change
