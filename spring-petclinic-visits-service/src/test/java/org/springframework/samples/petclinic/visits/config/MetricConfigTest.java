@@ -23,4 +23,3 @@ class MetricConfigTest {
         assertThat(timedAspect).isNotNull();
     }
 }
-// changes
