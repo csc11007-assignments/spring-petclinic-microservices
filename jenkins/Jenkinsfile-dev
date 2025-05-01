@@ -54,7 +54,7 @@ pipeline {
 
                     if (jacocoExecFiles) {
                         echo "Merging JaCoCo exec files: ${jacocoExecFiles}"
-                        def mergeXmlTemplate = readFile 'jacoco-merge.xml'
+                        def mergeXmlTemplate = readFile 'jenkins/jacoco-merge.xml'
                         def jacocoExecIncludes = jacocoExecFiles.collect { "<include>${it}</include>" }.join('\n')
                         def mergeXmlContent = mergeXmlTemplate.replace('${JACOCO_EXEC_FILES}', jacocoExecIncludes)
                         writeFile file: 'jacoco-merge-updated.xml', text: mergeXmlContent
